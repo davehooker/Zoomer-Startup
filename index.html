@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Startup Simulator - Multiplayer Satire</title>
+    <meta name="description" content="A satirical multiplayer startup simulation game. Take roles as CEO, CTO, PM, or Intern and navigate the chaos of startup life!">
+    
+    <!-- React and Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Multisynq -->
+    <script src="https://cdn.jsdelivr.net/npm/@multisynq/client@latest/bundled/multisynq-client.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #191919;
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+        
+        #root {
+            min-height: 100vh;
+        }
+        
+        /* Loading screen */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+        
+        .loading-title {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Dark scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .metrics {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            
+            .action-buttons {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        
+        /* Multisynq widget dock positioning */
+        #croquet_dock {
+            position: fixed !important;
+            top: 10px !important;
+            right: 10px !important;
+            left: auto !important;
+            bottom: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="loading-container">
+            <h1 class="loading-title">🚀 Loading Startup Simulator...</h1>
+            <p>Preparing to disrupt everything...</p>
+        </div>
+    </div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const StartupSimulator = () => {
+            const [session, setSession] = useState(null);
+            const [gameState, setGameState] = useState(null);
+            const [selectedRole, setSelectedRole] = useState(null);
+            const [chatMessage, setChatMessage] = useState('');
+            const [selectedDecision, setSelectedDecision] = useState(null);
+            const [showInvestorModal, setShowInvestorModal] = useState(false);
+            const [notifications, setNotifications] = useState([]);
+            const [activeTab, setActiveTab] = useState('overview');
+            const messagesEndRef = useRef(null);
+
+            useEffect(() => {
+                if (window.Multisynq) {
+                    initMultisynq();
+                } else {
+                    console.error('Multisynq not loaded');
+                }
+            }, []);
+
+            const initMultisynq = async () => {
+                class StartupModel extends window.Multisynq.Model {
+                    init() {
+                        this.company = {
+                            name: '🚀 DisruptorAI',
+                            funding: 1000000,
+                            runway: 12,
+                            valuation: 5000000,
+                            users: 0,
+                            burnRate: 83333,
+                            morale: 75,
+                            hype: 50,
+                            techDebt: 20,
+                            productQuality: 50,
+                            customerSatisfaction: 70,
+                            marketShare: 0.1,
+                            employees: {
+                                engineers: 2,
+                                designers: 1,
+                                marketers: 0,
+                                sales: 0
+                            },
+                            culture: 'Move Fast & Break Things'
+                        };
+
+                        this.players = new Map();
+                        this.tasks = [];
+                        this.messages = [];
+                        this.currentCrisis = null;
+                        this.decisions = new Map();
+                        this.pivotCount = 0;
+                        this.memeStrength = 0;
+                        this.achievements = [];
+                        
+                        this.products = [
+                            { id: 'ai-for-ai', name: 'AI for AI', status: 'ideation', progress: 0 }
+                        ];
+
+                        this.investors = [
+                            { name: 'Chad VC', personality: 'aggressive', patience: 50 },
+                            { name: 'Karen Angel', personality: 'micromanager', patience: 70 },
+                            { name: 'Boomer Fund', personality: 'traditional', patience: 30 }
+                        ];
+
+                        this.competitors = [
+                            { name: 'TechCorp', strength: 80, strategy: 'Copy everything', marketShare: 40 },
+                            { name: 'StartupXYZ', strength: 60, strategy: 'Move fast', marketShare: 30 },
+                            { name: 'BigCo', strength: 90, strategy: 'Acquire threats', marketShare: 20 }
+                        ];
+
+                        this.marketTrends = ['AI Everything', 'No-Code', 'Web3', 'Sustainability'];
+                        this.currentTrend = this.marketTrends[0];
+
+                        this.subscribe(this.sessionId, "view-join", this.handleViewJoin);
+                        this.subscribe(this.sessionId, "view-exit", this.handleViewExit);
+                        this.subscribe(this.id, "select-role", this.handleSelectRole);
+                        this.subscribe(this.id, "send-message", this.handleSendMessage);
+                        this.subscribe(this.id, "make-decision", this.handleMakeDecision);
+                        this.subscribe(this.id, "create-task", this.handleCreateTask);
+                        this.subscribe(this.id, "complete-task", this.handleCompleteTask);
+                        this.subscribe(this.id, "pivot", this.handlePivot);
+                        this.subscribe(this.id, "launch-meme", this.handleLaunchMeme);
+                        this.subscribe(this.id, "hire-employee", this.handleHireEmployee);
+                        this.subscribe(this.id, "develop-product", this.handleDevelopProduct);
+                        this.subscribe(this.id, "pitch-investor", this.handlePitchInvestor);
+                        this.subscribe(this.id, "marketing-campaign", this.handleMarketingCampaign);
+
+                        this.future(5000).generateCrisis();
+                        this.future(1000).updateMetrics();
+                        this.future(15000).competitorAction();
+                        this.future(30000).changeTrend();
+                    }
+
+                    handleViewJoin(viewId) {
+                        this.players.set(viewId, {
+                            id: viewId,
+                            role: null,
+                            joinedAt: this.now()
+                        });
+                        this.publish(this.id, "state-update", this.getState());
+                    }
+
+                    handleViewExit(viewId) {
+                        this.players.delete(viewId);
+                        this.publish(this.id, "state-update", this.getState());
+                    }
+
+                    handleSelectRole({ viewId, role }) {
+                        const player = this.players.get(viewId);
+                        if (player && !this.isRoleTaken(role)) {
+                            player.role = role;
+                            player.emoji = this.getRoleEmoji(role);
+                            this.messages.push({
+                                id: Math.random().toString(36),
+                                author: 'System',
+                                text: `${player.emoji} ${role} has joined the startup!`,
+                                timestamp: this.now(),
+                                type: 'system'
+                            });
+                            this.publish(this.id, "state-update", this.getState());
+                        }
+                    }
+
+                    handleSendMessage({ viewId, text }) {
+                        const player = this.players.get(viewId);
+                        if (player && player.role) {
+                            this.messages.push({
+                                id: Math.random().toString(36),
+                                author: player.role,
+                                emoji: player.emoji,
+                                text: text,
+                                timestamp: this.now(),
+                                type: 'chat'
+                            });
+                            this.publish(this.id, "state-update", this.getState());
+                        }
+                    }
+
+                    handleMakeDecision({ viewId, choice }) {
+                        const player = this.players.get(viewId);
+                        if (player && player.role && this.currentCrisis) {
+                            this.decisions.set(viewId, choice);
+                            
+                            if (this.decisions.size >= Math.ceil(this.players.size * 0.5)) {
+                                const votes = {};
+                                for (const [_, decision] of this.decisions) {
+                                    votes[decision] = (votes[decision] || 0) + 1;
+                                }
+                                
+                                const winner = Object.entries(votes).sort((a, b) => b[1] - a[1])[0][0];
+                                const option = this.currentCrisis.options.find(o => o.id === winner);
+                                
+                                if (option) {
+                                    this.applyDecisionEffects(option.effects);
+                                    this.messages.push({
+                                        id: Math.random().toString(36),
+                                        author: 'System',
+                                        text: `🎯 Team decided: "${option.text}"`,
+                                        timestamp: this.now(),
+                                        type: 'system'
+                                    });
+                                }
+                                
+                                this.currentCrisis = null;
+                                this.decisions.clear();
+                                this.publish(this.id, "state-update", this.getState());
+                            }
+                        }
+                    }
+
+                    handleCreateTask({ viewId, task }) {
+                        const player = this.players.get(viewId);
+                        if (player && player.role) {
+                            this.tasks.push({
+                                id: Math.random().toString(36),
+                                title: task.title,
+                                assignee: task.assignee || 'Unassigned',
+                                createdBy: player.role,
+                                completed: false,
+                                priority: task.priority || 'medium',
+                                createdAt: this.now()
+                            });
+                            this.publish(this.id, "state-update", this.getState());
+                        }
+                    }
+
+                    handleCompleteTask({ taskId }) {
+                        const task = this.tasks.find(t => t.id === taskId);
+                        if (task) {
+                            task.completed = true;
+                            this.company.morale += 5;
+                            this.company.techDebt = Math.max(0, this.company.techDebt - 5);
+                            this.publish(this.id, "state-update", this.getState());
+                        }
+                    }
+
+                    handlePivot() {
+                        this.pivotCount++;
+                        const pivotNames = [
+                            'Blockchain for Pets', 'Uber for Therapy', 'TikTok for B2B', 
+                            'OnlyFans for Code Reviews', 'Metaverse Real Estate', 'AI Horoscopes'
+                        ];
+                        
+                        this.company.name = `🔄 ${pivotNames[this.pivotCount % pivotNames.length]}`;
+                        this.company.hype = Math.min(100, this.company.hype + 30);
+                        this.company.morale = Math.max(0, this.company.morale - 20);
+                        this.company.valuation *= 0.8;
+                        
+                        this.messages.push({
+                            id: Math.random().toString(36),
+                            author: 'System',
+                            text: `🔄 PIVOT #${this.pivotCount}: We're now "${this.company.name}"!`,
+                            timestamp: this.now(),
+                            type: 'system'
+                        });
+                        
+                        this.publish(this.id, "state-update", this.getState());
+                    }
+
+                    handleLaunchMeme() {
+                        this.memeStrength = Math.random() * 100;
+                        const viralChance = this.memeStrength > 70;
+                        
+                        if (viralChance) {
+                            this.company.users += Math.floor(Math.random() * 50000) + 10000;
+                            this.company.hype = Math.min(100, this.company.hype + 40);
+                            this.messages.push({
+                                id: Math.random().toString(36),
+                                author: 'System',
+                                text: `🚀 MEME WENT VIRAL! +${this.company.users} users!`,
+                                timestamp: this.now(),
+                                type: 'system'
+                            });
+                        } else {
+                            this.company.hype = Math.max(0, this.company.hype - 10);
+                            this.messages.push({
+                                id: Math.random().toString(36),
+                                author: 'System',
+                                text: `😬 Meme flopped... "How do you do, fellow kids?"`,
+                                timestamp: this.now(),
+                                type: 'system'
+                            });
+                        }
+                        
+                        this.publish(this.id, "state-update", this.getState());
+                    }
+
+                    handleHireEmployee({ type }) {
+                        const costs = {
+                            engineers: 120000,
+                            designers: 100000,
+                            marketers: 90000,
+                            sales: 80000
+                        };
+
+                        if (this.company.funding >= costs[type]) {
+                            this.company.employees[type]++;
+                            this.company.burnRate += costs[type] / 12;
+                            this.company.funding -= 10000;
+                            
+                            const titles = {
+                                engineers: '10x Engineer',
+                                designers: 'Unicorn Designer',
+                                marketers: 'Growth Hacker',
+                                sales: 'Closer'
+                            };
+
+                            this.messages.push({
+                                id: Math.random().toString(36),
+                                author: 'System',
+                                text: `🎉 Hired a ${titles[type]}! Burn rate increased.`,
+                                timestamp: this.now(),
+                                type: 'system'
+                            });
+
+                            if (type === 'engineers') this.company.techDebt = Math.max(0, this.company.techDebt - 10);
+                            if (type === 'designers') this.company.productQuality += 5;
+                            if (type === 'marketers') this.company.hype += 10;
+                            if (type === 'sales') this.company.users += Math.floor(Math.random() * 1000);
+                        }
+
+                        this.publish(this.id, "state-update", this.getState());
+                    }
+
+                    handleDevelopProduct({ productId, investment }) {
+                        const product = this.products.find(p => p.id === productId);
+                        if (product && this.company.funding >= investment) {
+                            this.company.funding -= investment;
+                            product.progress += investment / 10000 * 10;
+                            
+                            if (product.progress >= 100) {
+                                product.status = 'launched';
+                                this.company.users += Math.floor(Math.random() * 10000) + 5000;
+                                this.company.valuation *= 1.5;
+                                
+                                this.messages.push({
+                                    id: Math.random().toString(36),
+                                    author: 'System',
+                                    text: `🚢 ${product.name} LAUNCHED! Users are pouring in!`,
+                                    timestamp: this.now(),
+                                    type: 'system'
+                                });
+                            }
+                        }
+
+                        this.publish(this.id, "state-update", this.getState());
+                    }
+
+                    handlePitchInvestor({ investorName }) {
+                        const investor = this.investors.find(i => i.name === investorName);
+                        if (investor) {
+                            const pitchSuccess = Math.random() * 100;
+                            const threshold = 50 - (this.company.hype / 2) + (this.pivotCount * 10);
+
+                            if (pitchSuccess > threshold) {
+                                const investment = Math.floor(Math.random() * 2000000) + 1000000;
+                                this.company.funding += investment;
+                                this.company.valuation *= 2;
+                                investor.patience = 100;
+
+                                this.messages.push({
+                                    id: Math.random().toString(36),
+                                    author: 'System',
+                                    text: `💰 ${investor.name} invested $${investment.toLocaleString()}! "LFG!" 🚀`,
+                                    timestamp: this.now(),
+                                    type: 'system'
+                                });
+                            } else {
+                                investor.patience -= 20;
+                                this.messages.push({
+                                    id: Math.random().toString(36),
+                                    author: 'System',
+                                    text: `😬 ${investor.name}: "Come back when you have traction"`,
+                                    timestamp: this.now(),
+                                    type: 'system'
+                                });
+                            }
+                        }
+
+                        this.publish(this.id, "state-update", this.getState());
+                    }
+
+                    handleMarketingCampaign({ type }) {
+                        const campaigns = {
+                            guerrilla: { cost: 10000, hypeBoost: 20, userBoost: 1000 },
+                            influencer: { cost: 50000, hypeBoost: 40, userBoost: 5000 },
+                            superbowl: { cost: 5000000, hypeBoost: 100, userBoost: 100000 }
+                        };
+
+                        const campaign = campaigns[type];
+                        if (campaign && this.company.funding >= campaign.cost) {
+                            this.company.funding -= campaign.cost;
+                            this.company.hype = Math.min(100, this.company.hype + campaign.hypeBoost);
+                            this.company.users += campaign.userBoost;
+
+                            const messages = {
+                                guerrilla: 'Guerrilla marketing! We spray-painted our logo everywhere!',
+                                influencer: 'Influencer campaign launched! They\'re calling us "cheugy"!',
+                                superbowl: 'SUPER BOWL AD! We\'re either genius or bankrupt!'
+                            };
+
+                            this.messages.push({
+                                id: Math.random().toString(36),
+                                author: 'System',
+                                text: `📢 ${messages[type]}`,
+                                timestamp: this.now(),
+                                type: 'system'
+                            });
+                        }
+
+                        this.publish(this.id, "state-update", this.getState());
+                    }
+
+                    generateCrisis() {
+                        const crises = [
+                            {
+                                title: '🔥 Production is DOWN!',
+                                description: 'The intern pushed to prod on Friday. Classic.',
+                                options: [
+                                    { id: 'a', text: 'Blame the intern publicly', effects: { morale: -20, techDebt: 10 } },
+                                    { id: 'b', text: 'All hands on deck!', effects: { morale: -10, techDebt: -10 } },
+                                    { id: 'c', text: 'Tweet "We\'re experiencing growth"', effects: { hype: 10, users: -1000 } }
+                                ]
+                            },
+                            {
+                                title: '💸 VC wants 10x growth',
+                                description: 'Your investor just watched a Gary Vee video.',
+                                options: [
+                                    { id: 'a', text: 'Promise Web3 integration', effects: { funding: 500000, techDebt: 30 } },
+                                    { id: 'b', text: 'Fake the metrics', effects: { valuation: 2000000, morale: -30 } },
+                                    { id: 'c', text: 'Actually try to grow', effects: { burnRate: 20000, users: 5000 } }
+                                ]
+                            },
+                            {
+                                title: '🤖 AI is taking over',
+                                description: 'Your AI feature became sentient and is demanding equity.',
+                                options: [
+                                    { id: 'a', text: 'Give it 10% equity', effects: { morale: 20, valuation: -1000000 } },
+                                    { id: 'b', text: 'Pull the plug', effects: { techDebt: -20, hype: -20 } },
+                                    { id: 'c', text: 'Make it the CEO', effects: { hype: 50, burnRate: -10000 } }
+                                ]
+                            }
+                        ];
+
+                        if (!this.currentCrisis && Math.random() > 0.3) {
+                            this.currentCrisis = crises[Math.floor(Math.random() * crises.length)];
+                            this.publish(this.id, "state-update", this.getState());
+                        }
+
+                        this.future(15000).generateCrisis();
+                    }
+
+                    competitorAction() {
+                        const competitor = this.competitors[Math.floor(Math.random() * this.competitors.length)];
+                        const actions = [
+                            () => {
+                                this.company.users = Math.max(0, this.company.users - Math.floor(Math.random() * 1000));
+                                return `${competitor.name} launched a competing feature! Lost some users.`;
+                            },
+                            () => {
+                                this.company.hype = Math.max(0, this.company.hype - 10);
+                                return `${competitor.name} is spreading FUD about us on Twitter!`;
+                            }
+                        ];
+
+                        const action = actions[Math.floor(Math.random() * actions.length)];
+                        const message = action();
+
+                        this.messages.push({
+                            id: Math.random().toString(36),
+                            author: 'System',
+                            text: `⚔️ ${message}`,
+                            timestamp: this.now(),
+                            type: 'system'
+                        });
+
+                        this.publish(this.id, "state-update", this.getState());
+                        this.future(15000 + Math.random() * 15000).competitorAction();
+                    }
+
+                    changeTrend() {
+                        const oldTrend = this.currentTrend;
+                        this.currentTrend = this.marketTrends[Math.floor(Math.random() * this.marketTrends.length)];
+                        
+                        this.messages.push({
+                            id: Math.random().toString(36),
+                            author: 'System',
+                            text: `📈 Market shift! "${oldTrend}" is out, "${this.currentTrend}" is IN!`,
+                            timestamp: this.now(),
+                            type: 'system'
+                        });
+
+                        this.publish(this.id, "state-update", this.getState());
+                        this.future(30000).changeTrend();
+                    }
+
+                    updateMetrics() {
+                        this.company.funding -= this.company.burnRate / 12;
+                        this.company.runway = Math.max(0, this.company.funding / this.company.burnRate);
+                        
+                        if (this.company.users > 0) {
+                            this.company.users += Math.floor(Math.random() * 100) - 20;
+                        }
+                        
+                        this.company.hype = Math.max(0, this.company.hype - 1);
+                        this.company.morale = Math.max(0, Math.min(100, this.company.morale + (Math.random() * 4 - 2)));
+                        
+                        if (this.company.funding <= 0) {
+                            this.messages.push({
+                                id: Math.random().toString(36),
+                                author: 'System',
+                                text: '💀 GAME OVER: Out of money! Time to move back with parents.',
+                                timestamp: this.now(),
+                                type: 'system'
+                            });
+                        }
+                        
+                        this.publish(this.id, "state-update", this.getState());
+                        this.future(3000).updateMetrics();
+                    }
+
+                    applyDecisionEffects(effects) {
+                        Object.entries(effects).forEach(([key, value]) => {
+                            if (this.company[key] !== undefined) {
+                                this.company[key] += value;
+                            }
+                        });
+                    }
+
+                    isRoleTaken(role) {
+                        for (const [_, player] of this.players) {
+                            if (player.role === role) return true;
+                        }
+                        return false;
+                    }
+
+                    getRoleEmoji(role) {
+                        const emojis = {
+                            'CEO': '🎩',
+                            'CTO': '💻',
+                            'Intern': '☕',
+                            'PM': '📊'
+                        };
+                        return emojis[role] || '👤';
+                    }
+
+                    getState() {
+                        return {
+                            company: this.company,
+                            players: Array.from(this.players.values()),
+                            tasks: this.tasks.slice(-20),
+                            messages: this.messages.slice(-50),
+                            currentCrisis: this.currentCrisis,
+                            decisions: Array.from(this.decisions.entries()),
+                            pivotCount: this.pivotCount,
+                            investors: this.investors,
+                            competitors: this.competitors,
+                            currentTrend: this.currentTrend,
+                            achievements: this.achievements,
+                            products: this.products
+                        };
+                    }
+                }
+
+                StartupModel.register("StartupModel");
+
+                class StartupView extends window.Multisynq.View {
+                    constructor(model) {
+                        super(model);
+                        this.model = model;
+                        this.subscribe(this.model.id, "state-update", this.handleStateUpdate);
+                        this.model.publish(this.model.id, "state-update", this.model.getState());
+                    }
+
+                    handleStateUpdate = (state) => {
+                        setGameState(state);
+                        if (messagesEndRef.current) {
+                            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    };
+                }
+
+                try {
+                    window.Multisynq.App.makeWidgetDock();
+                    
+                    const sess = await window.Multisynq.Session.join({
+                        apiKey: '2C5dNrZdnyx0LOHnVLDm3dszGJrufqxo3Px6DZ0T2u',
+                        appId: 'io.startup.simulator.game',
+                        name: window.Multisynq.App.autoSession(),
+                        password: window.Multisynq.App.autoPassword(),
+                        model: StartupModel,
+                        view: StartupView
+                    });
+                    setSession(sess);
+                } catch (error) {
+                    console.error('Failed to join session:', error);
+                }
+            };
+
+            const selectRole = (role) => {
+                if (session && !selectedRole) {
+                    session.view.publish(session.view.model.id, "select-role", { 
+                        viewId: session.view.viewId, 
+                        role 
+                    });
+                    setSelectedRole(role);
+                }
+            };
+
+            const sendMessage = () => {
+                if (session && chatMessage.trim()) {
+                    session.view.publish(session.view.model.id, "send-message", {
+                        viewId: session.view.viewId,
+                        text: chatMessage
+                    });
+                    setChatMessage('');
+                }
+            };
+
+            const makeDecision = (choiceId) => {
+                if (session) {
+                    session.view.publish(session.view.model.id, "make-decision", {
+                        viewId: session.view.viewId,
+                        choice: choiceId
+                    });
+                    setSelectedDecision(choiceId);
+                }
+            };
+
+            const createTask = () => {
+                const taskTitle = prompt('Enter task title:');
+                if (session && taskTitle) {
+                    session.view.publish(session.view.model.id, "create-task", {
+                        viewId: session.view.viewId,
+                        task: { title: taskTitle, priority: 'high' }
+                    });
+                }
+            };
+
+            const completeTask = (taskId) => {
+                if (session) {
+                    session.view.publish(session.view.model.id, "complete-task", { taskId });
+                }
+            };
+
+            const pivot = () => {
+                if (session) {
+                    session.view.publish(session.view.model.id, "pivot", {});
+                }
+            };
+
+            const launchMeme = () => {
+                if (session) {
+                    session.view.publish(session.view.model.id, "launch-meme", {});
+                }
+            };
+
+            const hireEmployee = (type) => {
+                if (session) {
+                    session.view.publish(session.view.model.id, "hire-employee", { type });
+                }
+            };
+
+            const developProduct = (productId) => {
+                const investment = prompt('How much to invest in development?');
+                if (session && investment) {
+                    session.view.publish(session.view.model.id, "develop-product", {
+                        productId,
+                        investment: parseInt(investment)
+                    });
+                }
+            };
+
+            const pitchInvestor = (investorName) => {
+                if (session) {
+                    session.view.publish(session.view.model.id, "pitch-investor", { investorName });
+                }
+            };
+
+            const marketingCampaign = (type) => {
+                if (session) {
+                    session.view.publish(session.view.model.id, "marketing-campaign", { type });
+                }
+            };
+
+            if (!gameState) {
+                return null;
+            }
+
+            if (!selectedRole) {
+                return (
+                    <div style={styles.container}>
+                        <div style={styles.roleSelection}>
+                            <h1 style={styles.title}>🦄 Choose Your Startup Role</h1>
+                            <div style={styles.roleGrid}>
+                                {[
+                                    { role: 'CEO', desc: 'Vision without execution', emoji: '🎩' },
+                                    { role: 'CTO', desc: 'Overengineer everything', emoji: '💻' },
+                                    { role: 'Intern', desc: 'Unpaid but passionate', emoji: '☕' },
+                                    { role: 'PM', desc: 'Meeting enthusiast', emoji: '📊' }
+                                ].map(({ role, desc, emoji }) => (
+                                    <button
+                                        key={role}
+                                        style={{
+                                            ...styles.roleCard,
+                                            opacity: gameState.players.some(p => p.role === role) ? 0.5 : 1,
+                                            cursor: gameState.players.some(p => p.role === role) ? 'not-allowed' : 'pointer'
+                                        }}
+                                        onClick={() => selectRole(role)}
+                                        disabled={gameState.players.some(p => p.role === role)}
+                                    >
+                                        <div style={styles.roleEmoji}>{emoji}</div>
+                                        <h3>{role}</h3>
+                                        <p style={styles.roleDesc}>{desc}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div style={styles.container}>
+                    <div style={styles.header}>
+                        <h1 style={styles.companyName}>{gameState.company.name}</h1>
+                        <div style={styles.metrics}>
+                            <div style={styles.metric}>
+                                💰 ${(gameState.company.funding || 0).toLocaleString()}
+                            </div>
+                            <div style={styles.metric}>
+                                ⏰ {Math.floor(gameState.company.runway || 0)} months
+                            </div>
+                            <div style={styles.metric}>
+                                👥 {(gameState.company.users || 0).toLocaleString()} users
+                            </div>
+                            <div style={styles.metric}>
+                                📈 ${(gameState.company.valuation || 0).toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={styles.mainContent}>
+                        <div style={styles.leftPanel}>
+                            <div style={styles.statusBars}>
+                                <div style={styles.statusItem}>
+                                    <span>😊 Morale</span>
+                                    <div style={styles.progressBar}>
+                                        <div style={{...styles.progressFill, width: `${gameState.company.morale}%`}} />
+                                    </div>
+                                </div>
+                                <div style={styles.statusItem}>
+                                    <span>🔥 Hype</span>
+                                    <div style={styles.progressBar}>
+                                        <div style={{...styles.progressFill, width: `${gameState.company.hype}%`, backgroundColor: '#ff6b6b'}} />
+                                    </div>
+                                </div>
+                                <div style={styles.statusItem}>
+                                    <span>🐛 Tech Debt</span>
+                                    <div style={styles.progressBar}>
+                                        <div style={{...styles.progressFill, width: `${gameState.company.techDebt}%`, backgroundColor: '#ffd43b'}} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {gameState.currentCrisis && (
+                                <div style={styles.crisisCard}>
+                                    <h2 style={styles.crisisTitle}>{gameState.currentCrisis.title}</h2>
+                                    <p style={styles.crisisDesc}>{gameState.currentCrisis.description}</p>
+                                    <div style={styles.decisionOptions}>
+                                        {gameState.currentCrisis.options.map(option => (
+                                            <button
+                                                key={option.id}
+                                                style={{
+                                                    ...styles.decisionButton,
+                                                    ...(selectedDecision === option.id ? styles.selectedDecision : {}),
+                                                    cursor: selectedDecision ? 'not-allowed' : 'pointer'
+                                                }}
+                                                onClick={() => makeDecision(option.id)}
+                                                disabled={selectedDecision}
+                                            >
+                                                {option.text}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div style={styles.votingStatus}>
+                                        {gameState.decisions.length} / {Math.ceil(gameState.players.length * 0.5)} votes needed
+                                    </div>
+                                </div>
+                            )}
+
+                            <div style={styles.actionButtons}>
+                                <button style={styles.actionButton} onClick={pivot}>
+                                    🔄 PIVOT! ({gameState.pivotCount})
+                                </button>
+                                <button style={styles.actionButton} onClick={launchMeme}>
+                                    🎯 Launch Meme Campaign
+                                </button>
+                                <button style={styles.actionButton} onClick={createTask}>
+                                    ➕ Create Task
+                                </button>
+                                <button style={styles.actionButton} onClick={() => setShowInvestorModal(!showInvestorModal)}>
+                                    💰 Pitch Investors
+                                </button>
+                            </div>
+
+                            <div style={styles.tabContainer}>
+                                <div style={styles.tabs}>
+                                    {['overview', 'team', 'products', 'market'].map(tab => (
+                                        <button
+                                            key={tab}
+                                            style={{
+                                                ...styles.tab,
+                                                ...(activeTab === tab ? styles.activeTab : {})
+                                            }}
+                                            onClick={() => setActiveTab(tab)}
+                                        >
+                                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div style={styles.tabContent}>
+                                    {activeTab === 'overview' && (
+                                        <div style={styles.tasksSection}>
+                                            <h3 style={styles.sectionTitle}>📋 Tasks</h3>
+                                            {gameState.tasks.map(task => (
+                                                <div key={task.id} style={{
+                                                    ...styles.taskItem,
+                                                    ...(task.completed ? styles.completedTask : {})
+                                                }}>
+                                                    <span>{task.title}</span>
+                                                    {!task.completed && (
+                                                        <button style={styles.completeButton} onClick={() => completeTask(task.id)}>
+                                                            ✓
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'team' && (
+                                        <div style={styles.teamSection}>
+                                            <h3 style={styles.sectionTitle}>👥 Your Team</h3>
+                                            <div style={styles.employeeGrid}>
+                                                {Object.entries(gameState.company.employees).map(([type, count]) => (
+                                                    <div key={type} style={styles.employeeCard}>
+                                                        <div style={styles.employeeType}>{type}</div>
+                                                        <div style={styles.employeeCount}>{count}</div>
+                                                        <button 
+                                                            style={styles.hireButton}
+                                                            onClick={() => hireEmployee(type)}
+                                                        >
+                                                            Hire +1
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'products' && (
+                                        <div style={styles.productsSection}>
+                                            <h3 style={styles.sectionTitle}>🚀 Products</h3>
+                                            {gameState.products.map(product => (
+                                                <div key={product.id} style={styles.productCard}>
+                                                    <h4>{product.name}</h4>
+                                                    <div>Status: {product.status}</div>
+                                                    <div style={styles.progressContainer}>
+                                                        <div style={{
+                                                            ...styles.progressFill,
+                                                            width: `${product.progress}%`,
+                                                            background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)'
+                                                        }} />
+                                                    </div>
+                                                    {product.status !== 'launched' && (
+                                                        <button 
+                                                            style={styles.developButton}
+                                                            onClick={() => developProduct(product.id)}
+                                                        >
+                                                            Develop Further
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'market' && (
+                                        <div style={styles.marketSection}>
+                                            <h3 style={styles.sectionTitle}>📈 Market</h3>
+                                            <div style={styles.trendBox}>
+                                                <strong>Current Trend:</strong> {gameState.currentTrend}
+                                            </div>
+                                            <div style={styles.campaignButtons}>
+                                                <button 
+                                                    style={styles.campaignButton}
+                                                    onClick={() => marketingCampaign('guerrilla')}
+                                                >
+                                                    Guerrilla Marketing ($10k)
+                                                </button>
+                                                <button 
+                                                    style={styles.campaignButton}
+                                                    onClick={() => marketingCampaign('influencer')}
+                                                >
+                                                    Influencer Campaign ($50k)
+                                                </button>
+                                                <button 
+                                                    style={styles.campaignButton}
+                                                    onClick={() => marketingCampaign('superbowl')}
+                                                >
+                                                    Super Bowl Ad ($5M) 🏈
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={styles.rightPanel}>
+                            <div style={styles.chatSection}>
+                                <h3 style={styles.sectionTitle}>💬 Slack (but worse)</h3>
+                                <div style={styles.messages}>
+                                    {gameState.messages.map(msg => (
+                                        <div key={msg.id} style={{
+                                            ...styles.message,
+                                            ...(msg.type === 'system' ? styles.systemMessage : {})
+                                        }}>
+                                            <span style={styles.messageAuthor}>
+                                                {msg.emoji} {msg.author}:
+                                            </span>
+                                            <span style={styles.messageText}>{msg.text}</span>
+                                        </div>
+                                    ))}
+                                    <div ref={messagesEndRef} />
+                                </div>
+                                <div style={styles.chatInput}>
+                                    <input
+                                        style={styles.input}
+                                        value={chatMessage}
+                                        onChange={(e) => setChatMessage(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                                        placeholder="Type a message..."
+                                    />
+                                    <button style={styles.sendButton} onClick={sendMessage}>
+                                        Send
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style={styles.playersSection}>
+                                <h3 style={styles.sectionTitle}>👥 Team</h3>
+                                {gameState.players.map(player => (
+                                    <div key={player.id} style={styles.playerItem}>
+                                        {player.emoji} {player.role || 'Choosing role...'}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {showInvestorModal && (
+                        <div style={styles.modalOverlay} onClick={() => setShowInvestorModal(false)}>
+                            <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+                                <h2 style={styles.modalTitle}>💰 Pitch to Investors</h2>
+                                <div style={styles.investorList}>
+                                    {gameState.investors.map(investor => (
+                                        <div key={investor.name} style={styles.investorCard}>
+                                            <h3>{investor.name}</h3>
+                                            <p>Type: {investor.personality}</p>
+                                            <div style={styles.progressBar}>
+                                                <div style={{
+                                                    ...styles.progressFill,
+                                                    width: `${investor.patience}%`,
+                                                    backgroundColor: investor.patience > 50 ? '#4caf50' : investor.patience > 20 ? '#ffd43b' : '#ff6b6b'
+                                                }} />
+                                            </div>
+                                            <button 
+                                                style={styles.pitchButton}
+                                                onClick={() => {
+                                                    pitchInvestor(investor.name);
+                                                    setShowInvestorModal(false);
+                                                }}
+                                            >
+                                                Pitch Now
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button style={styles.closeButton} onClick={() => setShowInvestorModal(false)}>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const styles = {
+            container: {
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                backgroundColor: '#191919',
+                color: '#e0e0e0',
+                minHeight: '100vh',
+                padding: '20px'
+            },
+            roleSelection: {
+                maxWidth: '800px',
+                margin: '0 auto',
+                textAlign: 'center'
+            },
+            title: {
+                fontSize: '3rem',
+                marginBottom: '1rem',
+                background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+            },
+            roleGrid: {
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '20px',
+                marginTop: '40px'
+            },
+            roleCard: {
+                background: '#2a2a2a',
+                border: '2px solid #3a3a3a',
+                borderRadius: '12px',
+                padding: '30px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+            },
+            roleEmoji: {
+                fontSize: '3rem',
+                marginBottom: '10px'
+            },
+            roleDesc: {
+                color: '#888',
+                fontSize: '0.9rem'
+            },
+            header: {
+                textAlign: 'center',
+                marginBottom: '30px'
+            },
+            companyName: {
+                fontSize: '2.5rem',
+                marginBottom: '20px',
+                background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+            },
+            metrics: {
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '30px',
+                flexWrap: 'wrap'
+            },
+            metric: {
+                background: '#2a2a2a',
+                padding: '15px 25px',
+                borderRadius: '8px',
+                fontSize: '1.1rem',
+                fontWeight: 'bold'
+            },
+            mainContent: {
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '30px',
+                maxWidth: '1400px',
+                margin: '0 auto',
+                className: 'main-content'
+            },
+            leftPanel: {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px'
+            },
+            rightPanel: {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px'
+            },
+            statusBars: {
+                background: '#2a2a2a',
+                padding: '20px',
+                borderRadius: '12px'
+            },
+            statusItem: {
+                marginBottom: '15px'
+            },
+            progressBar: {
+                width: '100%',
+                height: '20px',
+                background: '#1a1a1a',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                marginTop: '5px'
+            },
+            progressFill: {
+                height: '100%',
+                background: '#4caf50',
+                transition: 'width 0.3s ease'
+            },
+            crisisCard: {
+                background: '#3a2a2a',
+                border: '2px solid #ff6b6b',
+                borderRadius: '12px',
+                padding: '25px'
+            },
+            crisisTitle: {
+                fontSize: '1.5rem',
+                marginBottom: '10px',
+                color: '#ff6b6b'
+            },
+            crisisDesc: {
+                marginBottom: '20px',
+                color: '#ccc'
+            },
+            decisionOptions: {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+            },
+            decisionButton: {
+                background: '#2a2a2a',
+                border: '2px solid #444',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                color: '#e0e0e0',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                fontSize: '1rem',
+                textAlign: 'left'
+            },
+            selectedDecision: {
+                borderColor: '#4caf50',
+                background: '#2a3a2a'
+            },
+            votingStatus: {
+                textAlign: 'center',
+                marginTop: '15px',
+                color: '#888'
+            },
+            actionButtons: {
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '10px',
+                className: 'action-buttons'
+            },
+            actionButton: {
+                background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+                border: 'none',
+                padding: '15px',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease'
+            },
+            tabContainer: {
+                background: '#2a2a2a',
+                borderRadius: '12px',
+                overflow: 'hidden'
+            },
+            tabs: {
+                display: 'flex',
+                borderBottom: '2px solid #3a3a3a'
+            },
+            tab: {
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                padding: '15px',
+                color: '#888',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                transition: 'all 0.3s ease'
+            },
+            activeTab: {
+                color: '#fff',
+                borderBottom: '3px solid #667eea'
+            },
+            tabContent: {
+                padding: '20px'
+            },
+            tasksSection: {
+                minHeight: '200px'
+            },
+            sectionTitle: {
+                fontSize: '1.2rem',
+                marginBottom: '15px'
+            },
+            taskItem: {
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '10px',
+                marginBottom: '8px',
+                background: '#1a1a1a',
+                borderRadius: '6px',
+                transition: 'all 0.3s ease'
+            },
+            completedTask: {
+                opacity: 0.5,
+                textDecoration: 'line-through'
+            },
+            completeButton: {
+                background: '#4caf50',
+                border: 'none',
+                color: 'white',
+                padding: '5px 15px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+            },
+            teamSection: {
+                minHeight: '200px'
+            },
+            employeeGrid: {
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                gap: '15px'
+            },
+            employeeCard: {
+                background: '#1a1a1a',
+                padding: '15px',
+                borderRadius: '8px',
+                textAlign: 'center'
+            },
+            employeeType: {
+                textTransform: 'capitalize',
+                marginBottom: '5px'
+            },
+            employeeCount: {
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                marginBottom: '10px'
+            },
+            hireButton: {
+                background: '#4caf50',
+                border: 'none',
+                padding: '6px 12px',
+                borderRadius: '4px',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '0.8rem'
+            },
+            productsSection: {
+                minHeight: '200px'
+            },
+            productCard: {
+                background: '#1a1a1a',
+                padding: '15px',
+                borderRadius: '8px',
+                marginBottom: '10px'
+            },
+            progressContainer: {
+                width: '100%',
+                height: '10px',
+                background: '#0a0a0a',
+                borderRadius: '5px',
+                overflow: 'hidden',
+                margin: '10px 0'
+            },
+            developButton: {
+                background: '#667eea',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                color: 'white',
+                cursor: 'pointer',
+                width: '100%'
+            },
+            marketSection: {
+                minHeight: '200px'
+            },
+            trendBox: {
+                background: '#1a1a1a',
+                padding: '15px',
+                borderRadius: '8px',
+                marginBottom: '15px'
+            },
+            campaignButtons: {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+            },
+            campaignButton: {
+                background: '#ff6b6b',
+                border: 'none',
+                padding: '12px',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer'
+            },
+            chatSection: {
+                background: '#2a2a2a',
+                padding: '20px',
+                borderRadius: '12px',
+                height: '400px',
+                display: 'flex',
+                flexDirection: 'column'
+            },
+            messages: {
+                flex: 1,
+                overflowY: 'auto',
+                marginBottom: '15px',
+                padding: '10px',
+                background: '#1a1a1a',
+                borderRadius: '8px'
+            },
+            message: {
+                marginBottom: '10px',
+                padding: '8px',
+                borderRadius: '6px',
+                background: '#252525'
+            },
+            systemMessage: {
+                background: '#2a3a3a',
+                borderLeft: '3px solid #4caf50'
+            },
+            messageAuthor: {
+                fontWeight: 'bold',
+                marginRight: '10px'
+            },
+            messageText: {
+                color: '#ccc'
+            },
+            chatInput: {
+                display: 'flex',
+                gap: '10px'
+            },
+            input: {
+                flex: 1,
+                background: '#1a1a1a',
+                border: '2px solid #3a3a3a',
+                padding: '10px',
+                borderRadius: '6px',
+                color: '#e0e0e0',
+                fontSize: '1rem'
+            },
+            sendButton: {
+                background: '#667eea',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                color: 'white',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+            },
+            playersSection: {
+                background: '#2a2a2a',
+                padding: '20px',
+                borderRadius: '12px'
+            },
+            playerItem: {
+                padding: '10px',
+                marginBottom: '8px',
+                background: '#1a1a1a',
+                borderRadius: '6px'
+            },
+            modalOverlay: {
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000
+            },
+            modalContent: {
+                background: '#2a2a2a',
+                borderRadius: '16px',
+                padding: '30px',
+                maxWidth: '600px',
+                width: '90%',
+                maxHeight: '80vh',
+                overflow: 'auto'
+            },
+            modalTitle: {
+                fontSize: '2rem',
+                marginBottom: '20px',
+                textAlign: 'center'
+            },
+            investorList: {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '15px'
+            },
+            investorCard: {
+                background: '#1a1a1a',
+                padding: '20px',
+                borderRadius: '12px',
+                border: '2px solid #3a3a3a'
+            },
+            pitchButton: {
+                background: '#667eea',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                width: '100%',
+                marginTop: '10px'
+            },
+            closeButton: {
+                background: '#444',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                width: '100%',
+                marginTop: '20px'
+            }
+        };
+
+        ReactDOM.render(<StartupSimulator />, document.getElementById('root'));
+    </script>
+</body>
+</html>
